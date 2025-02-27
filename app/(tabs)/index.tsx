@@ -1,36 +1,32 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import Slider from '@react-native-community/slider';
 
-// Definimos un tipo para los días de la semana
 type DiaSemana = 'lunes' | 'martes' | 'miercoles' | 'jueves' | 'viernes';
 
-// Definimos un tipo para los idiomas válidos
 type Idioma = 'es' | 'en';
 
+const { width, height } = Dimensions.get('window');
+
 export default function PantallaInicio() {
-  // Usamos el tipo DiaSemana para definir las metas de cada día
-  const [metas, setMetas] = useState<{
-    [key in DiaSemana]: { nombre: string; descripcion: string };
-  }>({
-    lunes: { nombre: '', descripcion: '' },
-    martes: { nombre: '', descripcion: '' },
-    miercoles: { nombre: '', descripcion: '' },
-    jueves: { nombre: '', descripcion: '' },
-    viernes: { nombre: '', descripcion: '' },
+  const [diaActual, setDiaActual] = useState<DiaSemana>('lunes');
+  const [tamanoFuente, setTamanoFuente] = useState(18);
+  const [idioma, setIdioma] = useState<Idioma>('es');
+  const [metas, setMetas] = useState<Record<DiaSemana, { nombre: string; descripcion: string; estado: 'pendiente' | 'cumplida' }>>({
+    lunes: { nombre: '', descripcion: '', estado: 'pendiente' },
+    martes: { nombre: '', descripcion: '', estado: 'pendiente' },
+    miercoles: { nombre: '', descripcion: '', estado: 'pendiente' },
+    jueves: { nombre: '', descripcion: '', estado: 'pendiente' },
+    viernes: { nombre: '', descripcion: '', estado: 'pendiente' },
   });
 
-  const [colorFondo, setColorFondo] = useState('#fff'); // color de fondo inicial
-  const [tamanoFuente, setTamanoFuente] = useState(18);
-  const [idioma, setIdioma] = useState<Idioma>('es'); // Ahora el tipo es 'es' | 'en'
-
-  // Traducciones de los días
-  const traduccionesDias = {
-    es: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
-    en: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+  const coloresDeFondo: Record<DiaSemana, string> = {
+    lunes: '#D1F7FF',
+    martes: '#F7E1D7',
+    miercoles: '#D7F7D1',
+    jueves: '#F7F7D7',
+    viernes: '#F0D7FF',
   };
-
-  const coloresDeFondo = ['#D1F7FF', '#F7E1D7', '#D7F7D1', '#F7F7D7', '#F0D7FF']; // Colores suaves
 
   const traducciones = {
     es: {
@@ -38,192 +34,177 @@ export default function PantallaInicio() {
       metaNombre: 'Nombre de la meta',
       metaDescripcion: 'Descripción de la meta',
       textoSlider: 'Tamaño de texto:',
+      estadoMeta: {
+        pendiente: 'Pendiente',
+        cumplida: 'Cumplida',
+      },
     },
     en: {
       saludo: 'Weekly Goals Diary',
       metaNombre: 'Goal Name',
       metaDescripcion: 'Goal Description',
       textoSlider: 'Text Size:',
+      estadoMeta: {
+        pendiente: 'Pending',
+        cumplida: 'Completed',
+      },
     },
   };
 
-  // Función para actualizar las metas de cada día
-  const actualizarMeta = (dia: DiaSemana, campo: 'nombre' | 'descripcion', texto: string) => {
+  const diasOrdenados: DiaSemana[] = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
+
+  const siguienteDia = () => {
+    const indiceActual = diasOrdenados.indexOf(diaActual);
+    const nuevoIndice = (indiceActual + 1) % diasOrdenados.length;
+    setDiaActual(diasOrdenados[nuevoIndice]);
+  };
+
+  const anteriorDia = () => {
+    const indiceActual = diasOrdenados.indexOf(diaActual);
+    const nuevoIndice = (indiceActual - 1 + diasOrdenados.length) % diasOrdenados.length;
+    setDiaActual(diasOrdenados[nuevoIndice]);
+  };
+
+  const actualizarMeta = (campo: 'nombre' | 'descripcion', texto: string) => {
     setMetas((prevMetas) => ({
       ...prevMetas,
-      [dia]: { ...prevMetas[dia], [campo]: texto },
+      [diaActual]: { ...prevMetas[diaActual], [campo]: texto },
     }));
   };
 
-  // Cambiar el color de fondo al seleccionar un día
-  const cambiarColorFondo = (indice: number) => {
-    setColorFondo(coloresDeFondo[indice]);
+  const cambiarEstadoMeta = () => {
+    setMetas((prevMetas) => ({
+      ...prevMetas,
+      [diaActual]: {
+        ...prevMetas[diaActual],
+        estado: prevMetas[diaActual].estado === 'pendiente' ? 'cumplida' : 'pendiente',
+      },
+    }));
   };
 
   return (
-    <ScrollView contentContainerStyle={[estilos.contenedor, { backgroundColor: colorFondo }]}>
-      {/* Encabezado */}
-      <View style={estilos.encabezado}>
-        <Text style={estilos.textoEncabezadoIzquierda}>Fabian Cornejo</Text>
-        <Text style={estilos.textoEncabezadoIzquierda}>ISFT °220</Text>
-        <Text style={estilos.textoEncabezadoCentro}>{traducciones[idioma].saludo}</Text>
+    <ScrollView contentContainerStyle={[styles.contenedor, { backgroundColor: coloresDeFondo[diaActual] }]}>
+      <View style={styles.header}>
+        <Text style={[styles.textoEncabezado, { fontSize: tamanoFuente }]}>
+          Fabián Cornejo ISFT220
+        </Text>
       </View>
-
-      {/* Aquí agregamos los TextInputs para las metas de cada día */}
-      <View style={estilos.contenedorDias}>
-        {traduccionesDias[idioma].map((dia, index) => {
-          const diaClave: DiaSemana = dia.toLowerCase() as DiaSemana; // Convertimos el nombre a la clave correspondiente en el objeto metas
-          return (
-            <View key={index} style={[estilos.columnaDia, { borderRightWidth: index < traduccionesDias[idioma].length - 1 ? 1 : 0 }]}>
-              <TouchableOpacity onPress={() => cambiarColorFondo(index)} style={estilos.botonDia}>
-                <Text style={[estilos.textoDia, { fontSize: tamanoFuente }]}>
-                  {dia}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Nombre de la meta */}
-              <TextInput
-                style={estilos.entrada}
-                placeholder={traducciones[idioma].metaNombre}
-                value={metas[diaClave]?.nombre || ''}
-                onChangeText={(texto) => actualizarMeta(diaClave, 'nombre', texto)}
-              />
-              {/* Descripción de la meta */}
-              <TextInput
-                style={estilos.entrada}
-                placeholder={traducciones[idioma].metaDescripcion}
-                value={metas[diaClave]?.descripcion || ''}
-                onChangeText={(texto) => actualizarMeta(diaClave, 'descripcion', texto)}
-              />
-            </View>
-          );
-        })}
+      <Text style={[styles.textoEncabezado, { fontSize: tamanoFuente }]}>
+        {traducciones[idioma as keyof typeof traducciones].saludo}
+      </Text>
+      <View style={styles.card}>
+        <Text style={[styles.textoDia, { fontSize: tamanoFuente }]}>{diaActual.toUpperCase()}</Text>
+        <TextInput
+          style={[styles.entrada, { fontSize: tamanoFuente }]}
+          placeholder={traducciones[idioma].metaNombre}
+          value={metas[diaActual].nombre}
+          onChangeText={(texto) => actualizarMeta('nombre', texto)}
+        />
+        <TextInput
+          style={[styles.entrada, { fontSize: tamanoFuente }]}
+          placeholder={traducciones[idioma].metaDescripcion}
+          value={metas[diaActual].descripcion}
+          onChangeText={(texto) => actualizarMeta('descripcion', texto)}
+        />
+        <Text style={[styles.textoEstado, { fontSize: tamanoFuente }]}>
+          {traducciones[idioma].estadoMeta[metas[diaActual].estado]}
+        </Text>
+        <TouchableOpacity onPress={cambiarEstadoMeta} style={styles.botonEstado}>
+          <Text style={styles.textoBoton}>Cambiar Estado</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={anteriorDia} style={styles.botonAnterior}>
+          <Text style={styles.textoBoton}>Anterior</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={siguienteDia} style={styles.botonSiguiente}>
+          <Text style={styles.textoBoton}>Siguiente</Text>
+        </TouchableOpacity>
       </View>
-
-      {/* Contenedor de los botones de idioma y slider (ubicados abajo) */}
-      <View style={estilos.botonYSlider}>
-        {/* Botones de idioma */}
-        <View style={estilos.botonIdioma}>
-          <TouchableOpacity onPress={() => setIdioma('es')} style={estilos.boton}>
-            <Text style={estilos.textoBoton}>Español</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setIdioma('en')} style={estilos.boton}>
-            <Text style={estilos.textoBoton}>English</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Slider y tamaño de texto */}
-        <View style={estilos.sliderContainer}>
-          <Slider
-            style={estilos.slider}
-            minimumValue={15}
-            maximumValue={48}
-            step={1}
-            value={tamanoFuente}
-            onValueChange={setTamanoFuente}
-          />
-          <Text style={estilos.textoSlider}>{traducciones[idioma].textoSlider} {tamanoFuente}</Text>
-        </View>
+      <View style={styles.sliderContainer}>
+        <Slider
+          style={styles.slider}
+          minimumValue={18}
+          maximumValue={48}
+          step={1}
+          value={tamanoFuente}
+          onValueChange={setTamanoFuente}
+        />
+        <Text style={[styles.textoSlider, { fontSize: tamanoFuente }]}>
+          {traducciones[idioma].textoSlider} {tamanoFuente}
+        </Text>
       </View>
     </ScrollView>
   );
 }
 
-const estilos = StyleSheet.create({
+const styles = StyleSheet.create({
   contenedor: {
-    flexGrow: 1, // Esto asegura que el contenido crezca y se pueda desplazar
-    padding: 20,
-    justifyContent: 'flex-start',
-  },
-  encabezado: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexGrow: 1,
     alignItems: 'center',
-    backgroundColor: '#007bff',
-    paddingVertical: 15,
-    marginBottom: 20,
+    padding: width * 0.05,
   },
-  textoEncabezadoIzquierda: {
-    fontSize: 18,
-    color: '#fff',
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  textoEncabezadoCentro: {
-    fontSize: 20,
-    color: '#fff',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    flex: 1, // Para que el texto se alinee al centro
+  header: { width: '100%', alignItems: 'center', marginBottom: 20},
+  textoEncabezado: { fontWeight: 'bold', marginBottom: 10, },
+  card: {
+    backgroundColor: '#f5f4f4',
+    padding: 20,
+    borderRadius: 10,
+    width: width * 0.5,
+    alignItems: 'center',
   },
   textoDia: {
-    fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#000',
-  },
-  botonDia: {
-    backgroundColor: '#f0f0f0',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginBottom: 10,
-    borderRadius: 5,
+    fontSize: width * 0.05,
   },
   entrada: {
-    height: 40,
-    width: '80%', // Ajustamos el ancho para que quede más centrado
-    borderColor: 'gray',
+    width: '90%',
     borderWidth: 1,
-    paddingHorizontal: 10,
-    marginBottom: 20,
-    alignSelf: 'center',
-  },
-  contenedorDias: {
-    flexDirection: 'row', // Para alinear los días horizontalmente
-    justifyContent: 'space-between', // Asegura que los días estén separados
-    marginTop: 10,
-    marginBottom: 20,
-    flexWrap: 'wrap', // Permite que los días se ajusten si la pantalla es pequeña
-  },
-  columnaDia: {
-    alignItems: 'center',
-    width: '18%', // Para asegurar que todos los días quepan bien en la pantalla
-    marginBottom: 20,
-    borderRightWidth: 1,
-    borderColor: '#000', // Línea de separación de los días en negro
-    paddingRight: 10,
-  },
-  sliderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  slider: {
-    width: 180,
-    height: 40,
-  },
-  textoSlider: {
-    fontSize: 16,
-    marginLeft: 10,
-  },
-  botonYSlider: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  botonIdioma: {
-    flexDirection: 'row',
+    padding: 10,
     marginBottom: 10,
   },
-  boton: {
-    backgroundColor: '#007bff',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+  textoEstado: {
+    marginTop: 10,
+    fontWeight: 'bold',
+  },
+  botonEstado: {
+    backgroundColor: '#28a745',
+    padding: 15,
+    marginTop: 10,
     borderRadius: 5,
-    marginHorizontal: 10,
+  },
+  botonSiguiente: {
+    backgroundColor: '#007bff',
+    padding: 15,
+    marginTop: 10,
+    borderRadius: 5,
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+  },
+  botonAnterior: {
+    backgroundColor: '#007bff',
+    padding: 15,
+    marginTop: 10,
+    borderRadius: 5,
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
   },
   textoBoton: {
     color: '#fff',
-    fontSize: 16,
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  sliderContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  slider: {
+    width: width * 0.2,
+    height: 40,
+  },
+  textoSlider: {
+    marginTop: 10,
+    fontWeight: 'bold',
   },
 });
-
